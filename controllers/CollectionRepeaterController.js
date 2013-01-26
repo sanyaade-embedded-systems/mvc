@@ -16,7 +16,8 @@ enyo.kind({
     handlers: {
       onpreparerow: "prepareRow",
       // collection events
-      oncollectionadd: "modelAdded"
+      oncollectionadd: "modelAdded",
+      oncollectionreset: "renderAllRows"
     },
     render: function (idx) {
         // if we do not have an owner we can't do anything
@@ -53,6 +54,9 @@ enyo.kind({
         } else record = data[idx];
         // if the index isn't valid...we can't do anything
         if (-1 === idx) return false;
+        
+        if (-1 === data.indexOf(record)) return false;
+        
         // try and reuse an existing row if possible
         if (!(row = rows[idx])) {
             row = view.createComponent(def);
@@ -104,5 +108,12 @@ enyo.kind({
             idx = sender;
         } else idx = event.index;
         this.select(idx);
-    }
+    },
+    ownerChanged: function () {
+        this.inherited(arguments);
+        if (this.owner) this.renderAllRows();
+    },
+    dataDidChange: enyo.Observer(function () {
+        this.renderAllRows();
+    }, "data")
 });

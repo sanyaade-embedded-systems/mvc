@@ -5,7 +5,7 @@
     It only stores the selected index and not a reference to the object.
 */
 enyo.Mixin({
-    name: "enyo.SelectionSupportMixin",
+    name: "enyo.SelectionSupport",
     /**
         Set this to true to enable multiple selection, it is false
         by default.
@@ -167,10 +167,11 @@ enyo.Mixin({
     // and it forces a reset of selection to anyone listening
     // but...it still seems wrong, leaving it for now
     collectionDidReset: function (collection, options) {
-        var models = options.previousModels || [];
-        enyo.forEach(models, function (model) {
-            model.destroy();
-        });
+        //var models = options.previousModels || [];
+        //enyo.forEach(models, function (model) {
+        //    model.destroy();
+        //});
+        this.deselect();
         this.inherited(arguments);
     },
     selectedModelChanged: function (model) {
