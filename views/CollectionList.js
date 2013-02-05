@@ -4,7 +4,8 @@
     This is an interim-kind. It is designed to be functional - integrating
     an API similar to _enyo.List_ and work with _enyo.CollectionController_s
     using _Backbone.Collection_s and _Backbone.Model_s. __It will not exist
-    in the future.__ A kind with a similar API will replace it.
+    in the future.__ A kind with a similar API will replace it. Currently
+    does not support multiselect _completely_.
 */
 enyo.kind({
     
@@ -48,11 +49,12 @@ enyo.kind({
         // other
         onSetupItem: "setupItem"
     },
-    
+
     //*@protected
     bindings: [
         {from: ".controller.length", to: ".length"},
         {from: ".length", to: ".count"},
+        {from: ".controller.selection", to: ".selection"},
         {from: ".controller.data", to: ".data"}
     ],
     
@@ -62,13 +64,15 @@ enyo.kind({
     //*@protected
     initComponents: function () {
         var components = this.kindComponents || this.components || [];
-        var def = components[0];
+        var def = (function (children) {
+            return children.length > 1? {components: children}: enyo.clone(children[0]);
+        }(components));
         var mixins = def.mixins || [];
         var ctor;
         this.findAndInstance("defaultChildController");
         def.controller = this.childController;
         def.mixins = enyo.merge(mixins, this.childMixins);
-        this.components = components;
+        this.components = [def];
         this.kindComponents = [];
         this.inherited(arguments);
     },
@@ -92,10 +96,10 @@ enyo.kind({
     //*@protected
     setupItem: function (sender, event) {
         var model = event.model;
-        if (true === event.selected) {
-            if (model) {
-                this.controller.select(model);
-            }
+        if (true === event.selected && model) {
+            this.controller.select(model);
+        } else if (!event.selected && model) {
+            model.set("selected", false);
         }
         if (model) this.childController.set("model", model);
     },
@@ -107,16 +111,6 @@ enyo.kind({
                 this.reset();
             } this.refresh();
         }
-    },
-    
-    //*@protected
-    countChanged: function () {
-        if (this.count) {
-            if (this.$.generator) {
-                this.$.generator.count = this.count;
-            }
-        }
-        this.inherited(arguments);
     },
     
     //*@protected
@@ -135,6 +129,54 @@ enyo.kind({
     //*@protected
     repeaterDidReset: function (sender, event) {
         this.reset();
+    },
+    
+    //*@protected
+    repeaterDidRemove: function (sender, event) {
+        // ok, so, again, since the state of selection and rendering
+        // is not controller by the data, we have to find a way to
+        // keep them synchronized, the following happens because it is
+        // possible that if a row was selected but the model had its
+        // destroy method executed the list will still think the row is
+        // selected and automatically cause the model that gets moved
+        // into that index to be selected, here we catch that scenario
+        // make sure to deselect the row
+        var values = event.values;
+        var indices = enyo.keys(values);
+        var idx;
+        var pos = 0;
+        var len = indices.length;
+        var data = this.get("data");
+        var model;
+        for (; pos < len; ++pos) {
+            idx = indices[pos];
+            model = values[idx];
+            if (model) {
+                if (model.changed) {
+                    if (false === model.changed.selected) {
+                        this.deselect(idx);
+                    }
+                }
+            }
+        }
+    },
+    
+    //*@protected
+    selectionChanged: function () {
+        if (this.selection) {
+            var idx = this.controller.indexOf(this.selection);
+            if (!this.getSelection().isSelected(idx)) {
+                this.select(idx);
+            }
+        } else {
+            var selection = this.getSelection();
+            for (var key in selection.selected) {
+                if (true === selection.selected[key]) {
+                    selection.clear();
+                    break;
+                }
+            }
+        }
     }
     
 });

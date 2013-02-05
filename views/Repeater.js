@@ -53,7 +53,7 @@ enyo.kind({
     
     //*@public
     prune: function () {
-        var children = this.children;
+        var children = this.getClientControls();
         var len = this.get("length");
         var idx = 0;
         var blackbook = children.slice(len);
@@ -72,7 +72,7 @@ enyo.kind({
     //*@public
     update: function (index, data) {
         index = parseInt(index);
-        var children = this.children;
+        var children = this.getClientControls();
         var data = data? data.length? data[index]: data: this.get("data")[index];
         var child = children[index];
         var len = this.get("length");
@@ -93,7 +93,7 @@ enyo.kind({
     
     //*@protected
     add: function (index, data) {
-        var children = this.children;
+        var children = this.getClientControls();
         var pos = children.length;
         var data = data || this.get("data")[index];
         var kind = this.child;
@@ -121,8 +121,11 @@ enyo.kind({
         // the normal flow of initializing components
         var components = this.kindComponents || this.components || [];
         // we try and retrieve the definition/configuration for the child
-        // component/view we will need to use in the repeater
-        var def = components[0];
+        // component/view we will need to use in the repeater, if there are
+        // multiple children we combine them into a wrapper view
+        var def = (function (children) {
+            return children.length > 1? {components: children}: enyo.clone(children[0]);
+        }(components));
         // we grab a reference to any mixins the definition might have
         // so we can add the one we know needs to be there
         var mixins = def.mixins || [];
@@ -190,7 +193,7 @@ enyo.kind({
         var indices = enyo.keys(values);
         var idx;
         var len = indices.length;
-        var children = this.children;
+        var children = this.getClientControls();
         var child;
         var pos = 0;
         for (; pos < len; ++pos) {
